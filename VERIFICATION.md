@@ -4,6 +4,9 @@
 
 - 元のGitHubリポジトリはコミット・ファイルなし。既存フレームワーク・環境変数定義・Vercelリンクファイルなし。
 - 作業ブランチ: `feat/member-portal`。
+- ユーザーよりVercelの本番ブランチは `main`、読み取りAPIキーはPreviewに設定済みとの確認あり。
+- `feat/member-portal` をGitHubへpush済み。コミット `4bc8497` に対してVercelのGitHubステータスが `success`（Deployment has completed）。管理画面: https://vercel.com/kazuakihanda01-5525s-projects/ikebukuro-mj/HZJyYvjRBumcmYerL8CxrzVQQ2jj
+- push後も本番URLはHTTP 404。`main` へのpush・本番切り替えは行っていない。
 - `npm run build` 成功。トップは静的ページ、CMSページはリクエスト時描画。CMS取得結果はData Cacheで保持。
 - `npm run typecheck` 成功。
 - `npm test` 6件成功。HTMLのサニタイズ、日本時間表示、任意画像フィールド、署名検証など。
@@ -20,10 +23,10 @@
 
 ## 未確認・必要な入力
 
-- 指定PNG「富士を望む江戸の麻雀座敷.png」が提供されていないため `public/images/hero.png` は未配置。富士山と麻雀卓の切り抜き位置は実画像で要確認。
-- `MICROCMS_API_KEY` 未設定。各APIの実レスポンス、記事カバーの実フィールドID、実際の過去成績リンク先、実Webhook配送は未確認。
-- Vercel認証がなく、既存プロジェクトのGit連携・Production Branch・環境変数・Deployment Protectionは未確認。Vercelプレビューの作成・確認は未実施。
-- GitHubのWebhook一覧取得は連携権限により403。ただし、この結果だけではVercel連携の有無は判定できない。
-- 空リポジトリへの初回pushで作業ブランチがデフォルトとなる可能性があるため、本番ブランチ設定が判明するまでpushを保留。本番切り替えは行っていない。
+- 指定画像は会話上で確認済み。ただし元PNGファイルが実行環境に共有されていないため `public/images/hero.png` は未配置。ファイルの受領後、富士山と麻雀卓の切り抜き位置を確認する。
+- `MICROCMS_API_KEY` はVercel Previewに設定済み（ユーザー確認）。この開発環境には未設定。各APIの実レスポンス、記事カバーの実フィールドID、実際の過去成績リンク先、実Webhook配送は未確認。
+- Vercelの自動デプロイ成功はGitHubステータスで確認済み。公開プレビューURLとDeployment Protectionは未確認。プレビュー上の動作検証は未実施。
+- `MICROCMS_WEBHOOK_SECRET` の設定と、プレビューURL向けCMS Webhookの設定は未確認。
+- 空リポジトリへの初回pushにより、GitHubのデフォルトブランチは `feat/member-portal` となった。Vercelの本番ブランチ `main` は変更していない。
 
-Vercelプラグインの接続または開発環境の `VERCEL_TOKEN`、microCMS読み取りキーとWebhookシークレット、指定PNGを受け取った後、READMEの実データ確認を完了する。
+公開プレビューURL（またはVercelへの接続）と指定PNGファイルを受け取り、READMEの実データ確認を続行する。実Webhook検証には共有シークレットとCMS側の設定も必要。
