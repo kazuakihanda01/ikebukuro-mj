@@ -47,7 +47,7 @@ Framework PresetはNext.js、Root Directoryはリポジトリルート、Node.js
 
 環境変数の追加・変更後はプレビューデプロイを作り直してください。通常のCMS本文更新では再デプロイは不要です。
 
-動作確認したプレビュー: https://ikebukuro-j16ggytox-kazuakihanda01-5525s-projects.vercel.app （Vercel Authenticationあり）。実データとローカルのテストデータの検証範囲は `VERIFICATION.md` に記載しています。
+動作確認したプレビュー: https://ikebukuro-deaq2wtw1-kazuakihanda01-5525s-projects.vercel.app （Vercel Authenticationあり）。実データとローカルのテストデータの検証範囲は `VERIFICATION.md` に記載しています。
 
 ## microCMSのAPI対応
 

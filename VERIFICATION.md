@@ -3,9 +3,9 @@
 ## 現在のプレビュー
 
 - ブランチ: `feat/member-portal`
-- 動作確認したアプリのコミット: `cdcc5dd`
-- URL: https://ikebukuro-j16ggytox-kazuakihanda01-5525s-projects.vercel.app
-- デプロイID: `dpl_7nLCZseTbBD4F9owHN2UdBqD6dwM`
+- 動作確認したアプリのコミット: `58e3a0b`
+- URL: https://ikebukuro-deaq2wtw1-kazuakihanda01-5525s-projects.vercel.app
+- デプロイID: `dpl_4vCQCyptTmcuwHQ4FT8H69aKSqVL`
 - Vercel: `READY`、Preview（`target: null`）、Framework: Next.js
 - 既存プロジェクト: `ikebukuro-mj` / `prj_va6Vvyzo9DQCGEaOHgvpKYABP5tv`
 - 本番ブランチは `main`（ユーザー確認）。本番切り替え・`main` へのpushは行っていない。
@@ -19,6 +19,8 @@ APIキーは実際にはProductionのみが対象だったため、既存の値�
 Deployment Protectionは維持。Vercelの認証済み取得と一時共有リンクで検証した。空リポジトリへの初回pushによりGitHubのデフォルトブランチは `feat/member-portal` になったが、Vercelの本番ブランチは変更していない。
 
 ## 実データで確認済み
+
+CMS本文・記事詳細・成績リンクは接続修正時の `cdcc5dd` で確認。トップの最新版は `58e3a0b` で再検証。
 
 | 対象 | 確認結果 |
 | --- | --- |
@@ -51,7 +53,8 @@ Deployment Protectionは維持。Vercelの認証済み取得と一時共有リ�
 - トップを白・黒・グレーで統一し、しっぽり明朝（400/600）をローカル配信。
 - 元PNGを変更せずCSSで白黒表示。ヒーロー画像を静的HTMLで表示。
 - `npm run build` と既存の `npm run test:e2e` が成功。360/390/768/1440pxでナビゲーションと各ページの横はみ出しを検証。
-- PC・スマホのトップのスクリーンショットを目視確認。
+- 最新Vercelプレビューでも360/390/768/1440pxで見出し「メニュー」、名称のみの5リンク、しっぽり明朝の読み込み、画像の白黒表示と横はみ出しなしを確認。開催日程への遷移とトップへ戻る操作も成功。ブラウザのpageerrorなし。
+- PC・スマホ・タブレットのトップのスクリーンショットを目視確認。スマホの画像高は181px（360px幅）/197px（390px幅）で、富士山と麻雀卓が見える。
 
 ## 残る確認
 
