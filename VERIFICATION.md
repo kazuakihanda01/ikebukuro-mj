@@ -1,34 +1,53 @@
 # 検証記録
 
-## 実施済み
+## 現在のプレビュー
 
-- 元のGitHubリポジトリはコミット・ファイルなし。既存フレームワーク・環境変数定義・Vercelリンクファイルなし。
-- 作業ブランチ: `feat/member-portal`。
-- ユーザーよりVercelの本番ブランチは `main`、読み取りAPIキーはPreviewに設定済みとの確認あり。
-- `feat/member-portal` をGitHubへpush済み。コミット `4bc8497` に対してVercelのGitHubステータスが `success`（Deployment has completed）。管理画面: https://vercel.com/kazuakihanda01-5525s-projects/ikebukuro-mj/HZJyYvjRBumcmYerL8CxrzVQQ2jj
-- push後も本番URLはHTTP 404。`main` へのpush・本番切り替えは行っていない。
-- ユーザーから共有されたプレビューURL: https://ikebukuro-j4rywf4pm-kazuakihanda01-5525s-projects.vercel.app
-- 上記URLでトップ・5メニューの下層にHTTPアクセス。すべてVercelログインへ転送され、Deployment Protectionによる閲覧制限を確認（ログイン画面のHTTP 200をアプリの表示成功とは扱っていない）。
-- `npm run build` 成功。トップは静的ページ、CMSページはリクエスト時描画。CMS取得結果はData Cacheで保持。
-- `npm run typecheck` 成功。
-- `npm test` 6件成功。HTMLのサニタイズ、日本時間表示、任意画像フィールド、署名検証など。
-- `npm run test:e2e` 成功。本番ビルドを使用したテスト用CMSレスポンスで確認。実CMSの編集・公開操作は行っていない。
-- 360 / 390 / 768 / 1440px の4画面幅で、トップ・5メニューの下層・記事詳細の計7ページを確認。画面全体の横はみ出しなし。長い表は表内の横スクロールを確認。
-- 開催日程・今期成績の優先ボタン、共通ナビ、年度絞り込み、記事詳細遷移、画像ありの記事、分類・日付なしの旧記事を確認。
-- 100件を超える記事のページ分割取得を確認（102件のfixture）。
-- `CurrentStandings` と `HistoricalStandings`、Googleスプレッドシート形式のリンク保持、`/score` のnoindexを確認。
-- 同じページの再表示でCMS呼び出しが増えないことを確認。
-- 不正署名のWebhookは401となり、キャッシュは保持。
-- 正常署名後は最初の再読込で本文変更を反映。
-- 記事の公開終了で一覧から消え、詳細はHTTP 404。再公開でキャッシュ済み404から復帰。同じサーバー・ビルドで確認。
-- PC・スマホのトップのスクリーンショットを目視確認。指定PNGがない状態の代替表示での確認。
+- ブランチ: `feat/member-portal`
+- 動作確認したアプリのコミット: `cdcc5dd`
+- URL: https://ikebukuro-j16ggytox-kazuakihanda01-5525s-projects.vercel.app
+- デプロイID: `dpl_7nLCZseTbBD4F9owHN2UdBqD6dwM`
+- Vercel: `READY`、Preview（`target: null`）、Framework: Next.js
+- 既存プロジェクト: `ikebukuro-mj` / `prj_va6Vvyzo9DQCGEaOHgvpKYABP5tv`
+- 本番ブランチは `main`（ユーザー確認）。本番切り替え・`main` へのpushは行っていない。
 
-## 未確認・必要な入力
+## 接続・デプロイ設定
 
-- 指定画像は会話上で確認済み。ただし元PNGファイルが実行環境に共有されていないため `public/images/hero.png` は未配置。ファイルの受領後、富士山と麻雀卓の切り抜き位置を確認する。
-- `MICROCMS_API_KEY` はVercel Previewに設定済み（ユーザー確認）。この開発環境には未設定。各APIの実レスポンス、記事カバーの実フィールドID、実際の過去成績リンク先、実Webhook配送は未確認。
-- Vercelの自動デプロイ成功はGitHubステータスで確認済み。プレビューURLも受領済み。Deployment Protectionのため本文を取得できず、プレビュー上の動作検証は未実施。ログイン不要の共有リンクを依頼中。
-- `MICROCMS_WEBHOOK_SECRET` の設定と、プレビューURL向けCMS Webhookの設定は未確認。
-- 空リポジトリへの初回pushにより、GitHubのデフォルトブランチは `feat/member-portal` となった。Vercelの本番ブランチ `main` は変更していない。
+Vercel接続と対象チームの認可後、フレームワーク未指定のため成功扱いのデプロイが404を返していたことを確認した。既存プロジェクトのFrameworkを `nextjs` に設定し、ソースにも `vercel.json` を追加した。
 
-公開プレビューURL（またはVercelへの接続）と指定PNGファイルを受け取り、READMEの実データ確認を続行する。実Webhook検証には共有シークレットとCMS側の設定も必要。
+APIキーは実際にはProductionのみが対象だったため、既存の値を読み出さずにPreviewも対象へ追加した。値・秘密はGitやブラウザに含めていない。`MICROCMS_WEBHOOK_SECRET` はまだ未設定。
+
+Deployment Protectionは維持。Vercelの認証済み取得と一時共有リンクで検証した。空リポジトリへの初回pushによりGitHubのデフォルトブランチは `feat/member-portal` になったが、Vercelの本番ブランチは変更していない。
+
+## 実データで確認済み
+
+| 対象 | 確認結果 |
+| --- | --- |
+| トップ | CMSを呼ばずHTMLのタイトル・説明、5メニュー、開催日程・今期成績の優先ボタンを表示 |
+| `/schedule` | HTTP 200、2026年度の日程本文を表示 |
+| `/score` | HTTP 200、今期速報と過去成績を分離、HTMLのnoindexを確認 |
+| 過去成績リンク | CMS本文のGoogleスプレッドシート公開URLを保持。通常のプロキシ付きHTTPクライアントでリンク先のHTTP 200を確認 |
+| `/topics` | HTTP 200、公開記事1件、年度2026の絞り込みと解除を確認 |
+| 記事詳細 | 一覧から `/topics/ku40v2kj95qs` へ遷移し本文を表示。掲載日2026年11月15日を日本時間で表示 |
+| `/about` / `/rules` | 両方HTTP 200、実際の本文を表示 |
+| PC・スマホ | Chromiumの1440px・390pxで上記7ページを操作。全体の横はみ出しなし、共通ナビ6リンクを確認。スクリーンショットを取得してトップ・記事・成績を目視確認 |
+| ランタイム | 当該デプロイの直近30分のerror/fatalログは該当なし |
+
+ブラウザ検証中、外部スプレッドシートへのPlaywright APIRequestContextの直接接続がこの環境のネットワーク経路で失敗した。ブラウザ内の7ページの操作検証はそこまでに完了しており、外部リンク先はプロキシを使うHTTPクライアントで別途HTTP 200を確認した。
+
+## ローカルのテストデータで確認済み
+
+- `npm run build` / `npm run typecheck` 成功。
+- `npm test` 6件成功。HTMLサニタイズ、日本時間、画像データ、Webhook署名など。
+- `npm run test:e2e` 成功。本番ビルドに対してテストプロセス内だけでCMS通信を模擬。
+- 360 / 390 / 768 / 1440pxの4画面幅、7ページで横はみ出しなし。長い表は表内で横スクロール。
+- 102件のページ分割取得、分類・日付なしの記事、カバーありの記事、年度フィルタ、詳細遷移。
+- 再表示でCMS呼び出しが増えないことを確認。
+- 不正署名は401でキャッシュを維持。正しい署名後は最初の再読込で変更を反映。
+- 公開終了で一覧から消え、詳細はHTTP 404。再公開でキャッシュ済み404から復帰。同じサーバー・ビルドで確認。
+
+## 残る確認
+
+- 指定画像は会話上で確認済み。ただし元PNGファイルが実行環境に共有されていないため `public/images/hero.png` は未配置。受領後、富士山と麻雀卓の構図をPC・スマホで確認する。現在はCSSの麻雀牌を代替表示。
+- 公開記事にカバー画像がなく、実スキーマの画像フィールドIDは未確定。ユーザーへ確認中。コードは実レスポンスの画像オブジェクトを扱い、明示フィールドIDの設定にも対応している。
+- Webhookの実通信確認はユーザー指示により今回は保留。`MICROCMS_WEBHOOK_SECRET` とCMS側通知設定がないため、実CMSでの公開・修正・公開終了の反映テストは未実施。ローカルの模擬通信のみで検証済み。
+- CMS記事の作成・編集・取り下げは行っていない。旧トピックス移行と本番切り替えは別工程。
