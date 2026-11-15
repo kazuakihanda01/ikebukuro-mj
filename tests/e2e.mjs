@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { chromium } from '@playwright/test';
 
 const temp = await mkdtemp(join(tmpdir(), 'ikebukuro-mj-e2e-'));
 const fixturePath = join(temp, 'cms.json');
 const callsPath = join(temp, 'calls.log');
-const secret = 'integration-test-secret-only';
 const port = 3107;
 const origin = `http://127.0.0.1:${port}`;
 const table = `<table><tbody><tr>${Array.from({length: 16}, (_, i) => `<th>順位項目${i}</th>`).join('')}</tr><tr>${'<td>123456789</td>'.repeat(16)}</tr></tbody></table>`;
 const data = {
+  __clockOffsetMs: 0,
   schedule: { schedule: '<h2>開催予定</h2><p>FIXTURE-SCHEDULE-V1</p>' + table },
   score: { CurrentStandings: '<h2>速報本文</h2><p>FIXTURE-CURRENT</p>' + table, HistoricalStandings: '<a href="https://docs.google.com/spreadsheets/d/test-fixture" target="_blank">過去成績シート</a>' },
   about: { aboutus: '<h2>会の紹介</h2><p>FIXTURE-ABOUT</p>' },
@@ -25,19 +25,30 @@ const data = {
     ...Array.from({ length: 100 }, (_, i) => ({ id: `past-${i}`, title: `過去の記事${i}`, body: '<p>過去の本文</p>', seasonYear: 2025, category: ['トピックス'] })),
   ],
 };
-await writeFile(fixturePath, JSON.stringify(data));
+const saveData = async () => {
+  await writeFile(fixturePath + '.next', JSON.stringify(data));
+  await rename(fixturePath + '.next', fixturePath);
+};
+await saveData();
 await writeFile(callsPath, '');
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port), '--hostname', '127.0.0.1'], {
-  cwd: resolve('.'), env: { ...process.env, NODE_OPTIONS: `--require=${resolve('tests/cms-preload.cjs')}`, MICROCMS_API_KEY: `integration-test-only-${randomUUID()}`, MICROCMS_WEBHOOK_SECRET: secret, MICROCMS_TOPICS_COVER_FIELD: 'realCoverField', CMS_TEST_DATA: fixturePath, CMS_TEST_CALLS: callsPath }, stdio: ['ignore', 'pipe', 'pipe'],
+  cwd: resolve('.'), env: { ...process.env, NODE_OPTIONS: `--require=${resolve('tests/cms-preload.cjs')}`, MICROCMS_API_KEY: `integration-test-only-${randomUUID()}`, MICROCMS_TOPICS_COVER_FIELD: 'realCoverField', CMS_TEST_DATA: fixturePath, CMS_TEST_CALLS: callsPath }, stdio: ['ignore', 'pipe', 'pipe'],
 });
 let logs = '';
 server.stdout.on('data', chunk => { logs += chunk; });
 server.stderr.on('data', chunk => { logs += chunk; });
 let browser;
 const get = async path => { const response = await fetch(origin + path); return { status: response.status, body: await response.text() }; };
-const webhook = async (api, id, type = 'edit', valid = true) => {
-  const body = JSON.stringify({ api, id, type });
-  return fetch(origin + '/api/revalidate', { method: 'POST', headers: { 'content-type': 'application/json', 'x-microcms-signature': valid ? createHmac('sha256', secret).update(body).digest('hex') : '0'.repeat(64) }, body });
+const advanceClock = async seconds => {
+  data.__clockOffsetMs += seconds * 1000;
+  await saveData();
+};
+const waitFor = async (check, message) => {
+  for (let i = 0; i < 100; i++) {
+    if (await check()) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  assert.fail(message);
 };
 try {
   let ready = false;
@@ -54,24 +65,25 @@ try {
   assert.match(list.body, /legacy-article/);
   assert.match(list.body, /2026年11月15日/);
   assert.match((await get('/topics/new-article')).body, /FIXTURE-ARTICLE-V1/);
+  assert.equal((await get('/api/revalidate')).status, 404, 'removed webhook endpoint');
 
   const callsBefore = await readFile(callsPath, 'utf8');
   await get('/schedule'); await get('/topics'); await get('/topics/new-article');
   assert.equal(await readFile(callsPath, 'utf8'), callsBefore, 'repeat views use Data Cache');
   data.schedule.schedule = data.schedule.schedule.replace('V1', 'V2');
-  await writeFile(fixturePath, JSON.stringify(data));
+  await saveData();
+  await advanceClock(240);
   assert.match((await get('/schedule')).body, /FIXTURE-SCHEDULE-V1/);
-  assert.equal((await webhook('schedule', undefined, 'edit', false)).status, 401);
-  assert.match((await get('/schedule')).body, /FIXTURE-SCHEDULE-V1/);
-  assert.equal((await webhook('schedule')).status, 200);
-  assert.match((await get('/schedule')).body, /FIXTURE-SCHEDULE-V2/);
+  assert.equal(await readFile(callsPath, 'utf8'), callsBefore, 'unexpired cache must not call API');
+  await advanceClock(61);
+  assert.equal(await readFile(callsPath, 'utf8'), callsBefore, 'time passing alone must not call API');
+  await waitFor(async () => (await get('/schedule')).body.includes('FIXTURE-SCHEDULE-V2'), 'schedule refresh after 300 seconds');
   data.topics[0].body = data.topics[0].body.replace('V1', 'V2');
   data.topics[0].title = '修正した記事';
-  await writeFile(fixturePath, JSON.stringify(data));
-  assert.equal((await webhook('topics', 'new-article')).status, 200);
-  assert.match((await get('/topics/new-article')).body, /FIXTURE-ARTICLE-V2/);
-  assert.match((await get('/topics')).body, /修正した記事/);
-  console.log('PASS: object fields, paginated list/detail, legacy articles, JST, noindex, spreadsheet links, cache, invalid signature, signed update');
+  await saveData();
+  await waitFor(async () => (await get('/topics/new-article')).body.includes('FIXTURE-ARTICLE-V2'), 'article refresh after 300 seconds');
+  await waitFor(async () => (await get('/topics')).body.includes('修正した記事'), 'list refresh after 300 seconds');
+  console.log('PASS: object fields, pagination, JST, noindex, links, cache reuse, request-triggered refresh after 300 seconds, removed webhook');
 
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
@@ -115,16 +127,31 @@ try {
   console.log('PASS: 4 viewport widths, 7 pages, table containment, navigation, year filter, detail link, cover, mobile menu navigation');
 
   data.topics.shift();
-  await writeFile(fixturePath, JSON.stringify(data));
-  assert.equal((await webhook('topics', 'new-article', 'unpublish')).status, 200);
-  assert.doesNotMatch((await get('/topics')).body, /new-article/);
-  assert.equal((await get('/topics/new-article')).status, 404);
+  await saveData();
+  assert.match((await get('/topics/new-article')).body, /FIXTURE-ARTICLE-V2/);
+  await advanceClock(301);
+  await waitFor(async () => !(await get('/topics')).body.includes('new-article'), 'unpublished article leaves list after cache expiry');
+  await waitFor(async () => (await get('/topics/new-article')).status === 404, 'unpublished detail becomes 404 after cache expiry');
   data.topics.unshift({ id: 'new-article', title: '再公開した記事', body: '<p>REPUBLISHED</p>', seasonYear: 2026 });
-  await writeFile(fixturePath, JSON.stringify(data));
-  assert.equal((await webhook('topics', 'new-article', 'publish')).status, 200);
-  assert.match((await get('/topics/new-article')).body, /REPUBLISHED/);
-  assert.match((await get('/topics')).body, /再公開した記事/);
-  console.log('PASS: unpublish removes list item and returns real 404; republish clears cached 404 without redeployment');
+  await saveData();
+  assert.equal((await get('/topics/new-article')).status, 404, '404 is cached until the next expiry');
+  await advanceClock(301);
+  await waitFor(async () => (await get('/topics/new-article')).body.includes('REPUBLISHED'), 'republish replaces cached 404 after expiry');
+  await waitFor(async () => (await get('/topics')).body.includes('再公開した記事'), 'republish returns to list after expiry');
+  console.log('PASS: timed unpublication removes list item and returns 404; timed republication replaces cached 404 without redeployment');
+
+  data.schedule.schedule = data.schedule.schedule.replace('V2', 'V3');
+  await saveData();
+  await waitFor(async () => (await get('/schedule')).body.includes('FIXTURE-SCHEDULE-V3'), 'warm the latest successful schedule');
+  data.__failedApi = 'schedule';
+  await advanceClock(301);
+  assert.match((await get('/schedule')).body, /FIXTURE-SCHEDULE-V3/);
+  await waitFor(async () => (await readFile(callsPath, 'utf8')).includes('503 /api/v1/schedule'), 'expired cache attempts API refresh and receives 503');
+  delete data.__failedApi;
+  data.schedule.schedule = data.schedule.schedule.replace('V3', 'V4');
+  await saveData();
+  await waitFor(async () => (await get('/schedule')).body.includes('FIXTURE-SCHEDULE-V4'), 'retry API after temporary failure');
+  console.log('PASS: API 503 keeps the last successful cached data; a later access retries and recovers');
 } catch (error) {
   console.error(logs);
   throw error;

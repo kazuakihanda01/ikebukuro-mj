@@ -36,18 +36,17 @@ Project Settings → Environment Variables に次を設定します。プレビ�
 | --- | --- |
 | `MICROCMS_SERVICE_DOMAIN` | `ikebukuromj`（未設定時も同値） |
 | `MICROCMS_API_KEY` | 対象5 APIの公開データにGET権限を持つ読み取り専用キー |
-| `MICROCMS_WEBHOOK_SECRET` | CMSのWebhook設定と同じ十分長いランダム文字列 |
 | `MICROCMS_TOPICS_COVER_FIELD` | 実スキーマで確認したカバー画像フィールドID（任意、下記参照） |
 
 APIキーはサーバー専用モジュールだけで使用します。ドラフトキーは使いません。キーや `.env.local` をGitに含めないでください。
 
 Framework PresetはNext.js、Root Directoryはリポジトリルート、Node.jsは22以上、Build Commandは `npm run build` です。既存Git連携のProduction Branchを変更せず、作業ブランチからPreview Deploymentを作成してください。CLI使用時は既存チームを選んで `vercel link --project ikebukuro-mj`、その後 `vercel` を実行します。`vercel --prod` は今回の範囲に含みません。CLI用 `VERCEL_TOKEN` は開発環境のシークレットとして管理し、アプリの環境変数には不要です。
 
-既存プロジェクトのFrameworkは `nextjs` に設定済みで、ソースにも `vercel.json` を配置しています。読み取りAPIキーは既存のProduction設定を維持してPreviewにも追加済みです。Webhookシークレットは未設定で、実通信確認はユーザー指示により今回は保留です。
+既存プロジェクトのFrameworkは `nextjs` に設定済みで、ソースにも `vercel.json` を配置しています。読み取りAPIキーは既存のProduction設定を維持してPreviewにも追加済みです。CMSデータの更新は300秒キャッシュ方式で行い、Webhookの設定は不要です。
 
 環境変数の追加・変更後はプレビューデプロイを作り直してください。通常のCMS本文更新では再デプロイは不要です。
 
-動作確認したプレビュー: https://ikebukuro-deaq2wtw1-kazuakihanda01-5525s-projects.vercel.app （Vercel Authenticationあり）。実データとローカルのテストデータの検証範囲は `VERIFICATION.md` に記載しています。
+動作確認したプレビュー: https://ikebukuro-mj-git-feat-memb-91ffa7-kazuakihanda01-5525s-projects.vercel.app （Vercel Authenticationあり）。実データとローカルのテストデータの検証範囲は `VERIFICATION.md` に記載しています。
 
 ## microCMSのAPI対応
 
@@ -68,26 +67,22 @@ Framework PresetはNext.js、Root Directoryはリポジトリルート、Node.js
 
 リッチHTMLは `sanitize-html` で許可要素・属性・URLに限定します。スクリプト・イベント属性・危険なURL・iframe・任意のstyleは除去。見出し、改行、表、HTTPS画像、通常のリンクは保持します。Googleスプレッドシートのリンクも保持します。表は専用の横スクロール領域で表示します。`/score` に `noindex` を設定しています（アクセス制限ではありません）。
 
-## キャッシュとWebhook
+## 300秒キャッシュによる更新
 
-CMSページはリクエスト時にサーバーで描画し、CMSのfetch結果をNext.js Data Cacheに `force-cache` / `revalidate: false` で保持します。TTLや定期更新はありません。初回や無効化後にAPIから公開済みデータを取得します。CMS未設定・取得失敗の画面自体を永続キャッシュしません。
+CMSの取得結果をNext.js Data Cache（`unstable_cache`）に **300秒** 保持します。対象は開催日程・成績・トピックス一覧/詳細・会の紹介・ルールです。トップは引き続きCMSを呼びません。
 
-5 APIそれぞれのAPI設定 → Webhook → カスタム通知を設定します。
+1. キャッシュがない場合は、サーバーからmicroCMSの公開済みデータを取得します。
+2. キャッシュ作成から300秒以内のアクセスは、キャッシュを表示します。
+3. 300秒経過後のアクセスでは、キャッシュを表示しながらバックグラウンドでAPIから再取得します。
+4. 再取得後にページを開き直すと、新しい内容を確認できます。
 
-1. URL: `https://<対象のデプロイURL>/api/revalidate`（POST）
-2. 通知内容: microCMS標準JSON（`api` / `id` / `type` を含む）
-3. 通知条件: 公開・公開中コンテンツの更新・公開終了・削除など、公開内容が変わるイベントすべて。予約公開/予約公開終了を使う場合も対象にします。
-4. シークレット: Vercelの `MICROCMS_WEBHOOK_SECRET` と同じ値を設定。
+アクセスがなければAPIを呼びません。常駐タイマー・Vercel Cron・ブラウザからの定期ポーリングは使いません。すでに開いている画面も自動では再読み込みしません。更新時刻の指定や日々の更新での再デプロイは不要です。これは300秒ごとに必ず通信する仕組みではなく、ユーザー指定の「300秒キャッシュし、期限後のアクセスで更新する」方式です。
 
-microCMS標準の `x-microcms-signature` を、生のリクエスト本文に対するHMAC-SHA256（hex）と定数時間比較します。URLに秘密を含めません。未設定は503、不正署名は401、不明APIや不正JSONは400です。
+キャッシュはAPIのURL（記事ID・ページ分割を含む）単位です。公開終了した記事の404もキャッシュの内容として記録し、古い公開本文が残り続けないようにします。再公開した場合も、404キャッシュの期限後の再取得で表示へ戻ります。APIの5xxや一時的な接続失敗では直近の成功したキャッシュを保持し、次のアクセスで再試行します。初回取得が失敗した場合は取得不能の案内を表示します。
 
-認証成功後、対象APIのキャッシュタグを即時期限切れにし、対象ページも無効化します。`topics` は一覧・該当詳細を対象とします（IDがない場合は全詳細）。次に開き直したリクエストで再取得するため、古い内容を一度返す方式は使いません。すでに開いている画面の自動更新は行いません。CMS側のWebhook失敗履歴も確認してください。
+Webhookの受信API `/api/revalidate` と共有シークレットは廃止しました。microCMS側のWebhook登録・`MICROCMS_WEBHOOK_SECRET` は不要です。以前に通知を登録してある場合は停止または削除してください。Vercelの未使用シークレットも削除できます。
 
-プレビューと本番のキャッシュは別です。プレビュー確認にはプレビューURL向けWebhookを追加します。Vercel Deployment Protectionが有効ならmicroCMSからの通知も止まるため、既存設定を確認し、Vercel公式のAutomation Bypassなど運用上承認された方法を設定してください。今回、保護設定や本番向けWebhookを勝手に変更しません。プレビューを削除したら検証用Webhookも削除します。
-
-現在の既存設定はVercel Authenticationが `all_except_custom_domains` で有効です。本番URLも `vercel.app` ドメインのため、別工程の本番切り替え時に、会員がログイン不要で閲覧できるよう保護の適用範囲も確認してください。
-
-本番切り替え時は、別工程として本番URLのWebhookを設定・検証します。CMS取得失敗時に公開終了記事の本文を返す独自フォールバックは設けていません。
+プレビューと本番のキャッシュは別です。現在のVercel Authentication設定は維持しています。本番切り替えは別工程として、会員がログイン不要で閲覧できるよう保護の適用範囲を確認してください。
 
 ## トップPNGの差し替え
 
@@ -102,7 +97,6 @@ microCMS標準の `x-microcms-signature` を、生のリクエスト本文に対
 - PC/スマホでタイトル・説明・5メニュー・共通ナビゲーションを確認。
 - 実APIの各本文と成績2区分、スプレッドシートの既存リンク先を確認。
 - トピックス一覧/詳細、年度絞り込み、画像あり/なし、分類・日付なしの記事を確認。
-- テスト用記事を公開 → 表示 → 本文修正 → 再読込 → 公開終了 → 一覧から消え詳細404、を同じデプロイで確認。運営の実記事を無断で編集しないでください。
-- 不正署名で401、正常Webhook後の再読込で変更が反映されることを確認。
+- テスト用記事の公開・修正・公開終了について、300秒のキャッシュ期限後の再取得で一覧/詳細に反映されることを同じデプロイで確認。期限後の最初の閲覧は古いキャッシュを表示する場合があるため、再取得後にもう一度開き直してください。運営の実記事を無断で編集しないでください。
 
 旧トピックスの一括移行・本番へのマージ/切り替えは今回の対象外です。

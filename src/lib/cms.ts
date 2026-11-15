@@ -1,8 +1,10 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import type { Topic } from "./content";
 
 export type Endpoint = "schedule" | "score" | "topics" | "about" | "rules";
-export const cmsTag = (endpoint: Endpoint, id?: string) => `microcms:${endpoint}${id ? `:${id}` : ""}`;
+const CACHE_SECONDS = 300;
 export class CmsError extends Error {
   constructor(public status: number) { super(`microCMS request failed (${status})`); }
 }
@@ -15,14 +17,23 @@ async function cmsFetch<T>(endpoint: Endpoint, id?: string, offset?: number): Pr
   if (!/^[a-z0-9-]+$/.test(domain)) throw new Error("Invalid microCMS service domain");
   const url = new URL(`https://${domain}.microcms.io/api/v1/${endpoint}${id ? `/${encodeURIComponent(id)}` : ""}`);
   if (offset !== undefined) { url.searchParams.set("limit", "100"); url.searchParams.set("offset", String(offset)); }
-  const response = await fetch(url, {
-    headers: { "X-MICROCMS-API-KEY": key },
-    cache: "force-cache",
-    next: { revalidate: false, tags: [cmsTag(endpoint), ...(id ? [cmsTag(endpoint, id)] : [])] },
-    signal: AbortSignal.timeout(15000),
+  const readCached = unstable_cache(async () => {
+    const response = await fetch(url, {
+      headers: { "X-MICROCMS-API-KEY": key },
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+    // Cache a 404 as data so unpublication replaces a previously cached article.
+    // Caching fetch alone would keep its last successful 200 response on a 404.
+    if (response.status === 404) return { status: 404 as const, data: null };
+    if (!response.ok) throw new CmsError(response.status);
+    return { status: 200 as const, data: await response.json() as T };
+  }, ["microcms-published-300s-v1", url.toString(), createHash("sha256").update(key).digest("hex")], {
+    revalidate: CACHE_SECONDS,
   });
-  if (!response.ok) throw new CmsError(response.status);
-  return response.json() as Promise<T>;
+  const result = await readCached();
+  if (result.status === 404) throw new CmsError(404);
+  return result.data;
 }
 export const getSchedule = () => cmsFetch<{ schedule?: string }>("schedule");
 export const getScore = () => cmsFetch<{ CurrentStandings?: string; HistoricalStandings?: string }>("score");
