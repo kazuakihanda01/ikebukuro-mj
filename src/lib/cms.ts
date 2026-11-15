@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
-import type { Topic } from "./content";
+import type { CmsImage, Topic } from "./content";
 
 export type Endpoint = "schedule" | "score" | "topics" | "about" | "rules";
 const CACHE_SECONDS = 300;
@@ -37,7 +37,7 @@ async function cmsFetch<T>(endpoint: Endpoint, id?: string, offset?: number): Pr
 }
 export const getSchedule = () => cmsFetch<{ schedule?: string }>("schedule");
 export const getScore = () => cmsFetch<{ CurrentStandings?: string; HistoricalStandings?: string }>("score");
-export const getAbout = () => cmsFetch<{ aboutus?: string }>("about");
+export const getAbout = () => cmsFetch<{ aboutus?: string; Adviser?: string; Adviserpic?: CmsImage }>("about");
 export const getRules = () => cmsFetch<{ rules?: string }>("rules");
 export const getTopic = (id: string) => cmsFetch<Topic>("topics", id);
 

@@ -31,6 +31,12 @@ body { background: #fff; color: #171717; font-family: var(--serif); }
 .brand { font-weight: 600; letter-spacing: .12em; }
 .main-nav { gap: 25px; font-size: 13px; font-weight: 400; }
 .main-nav a[aria-current="page"]::after { height: 1px; }
+.header-brand-row { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+.close-app { min-height: 44px; padding: 6px 15px; border: 1px solid #bfbfbf; background: #fff; color: #171717; font: inherit; font-size: 13px; cursor: pointer; }
+.close-app:hover { background: #171717; color: #fff; }
+.close-app-notice { max-width: 1280px; margin: 0 auto; padding: 0 24px 14px; color: var(--muted); font-size: 13px; }
+.adviser-content { margin-top: 28px; }
+.adviser-picture { display: block; max-width: 100%; height: auto; margin: 20px auto 0; }
 .site-footer { padding-top: 27px; }
 .site-footer a { font-weight: 600; letter-spacing: .1em; }
 
@@ -55,6 +61,7 @@ body { background: #fff; color: #171717; font-family: var(--serif); }
 
 @media (max-width: 820px) {
   .header-inner { min-height: 0; gap: 14px; }
+  .header-brand-row { width: 100%; justify-content: space-between; }
   .main-nav { gap: 23px; font-size: 12px; }
 }
 

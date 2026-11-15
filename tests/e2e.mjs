@@ -17,7 +17,7 @@ const data = {
   __clockOffsetMs: 0,
   schedule: { schedule: '<h2>開催予定</h2><p>FIXTURE-SCHEDULE-V1</p>' + table },
   score: { CurrentStandings: '<h2>速報本文</h2><p>FIXTURE-CURRENT</p>' + table, HistoricalStandings: '<a href="https://docs.google.com/spreadsheets/d/test-fixture" target="_blank">過去成績シート</a>' },
-  about: { aboutus: '<h2>会の紹介</h2><p>FIXTURE-ABOUT</p>' },
+  about: { aboutus: '<h2>会の紹介</h2><p>FIXTURE-ABOUT</p>', Adviser: '<p>FIXTURE-ADVISER</p>', Adviserpic: { url: 'https://images.microcms-assets.io/test-adviser.png', width: 1255, height: 706 } },
   rules: { rules: '<h2>基本ルール</h2><p>FIXTURE-RULES</p>' },
   topics: [
     { id: 'new-article', title: '年度ありの新しい記事', body: '<h2>記事本文</h2><p>FIXTURE-ARTICLE-V1</p>' + table, displayDate: '2026-11-14T16:00:00Z', seasonYear: 2026, category: ['お知らせ'], realCoverField: { url: 'https://images.microcms-assets.io/test-cover.png' } },
@@ -60,6 +60,8 @@ try {
   for (const [path, marker] of [['/schedule', 'FIXTURE-SCHEDULE-V1'], ['/score', 'FIXTURE-CURRENT'], ['/about', 'FIXTURE-ABOUT'], ['/rules', 'FIXTURE-RULES']]) { const result = await get(path); assert.equal(result.status, 200); assert.ok(result.body.includes(marker), `${path}: ${result.body.slice(-600)}`); }
   assert.match((await get('/score')).body, /name="robots" content="noindex/);
   assert.match((await get('/score')).body, /https:\/\/docs.google.com\/spreadsheets\/d\/test-fixture/);
+  assert.match((await get('/about')).body, /FIXTURE-ADVISER/);
+  assert.match((await get('/about')).body, /https:\/\/images.microcms-assets.io\/test-adviser.png/);
   const list = await get('/topics');
   assert.match(list.body, /past-99/); // proves pagination past 100
   assert.match(list.body, /legacy-article/);
@@ -125,6 +127,21 @@ try {
   await page.selectOption('#season', '');
   assert.equal(await page.locator('.topic-card').count(), 102);
   console.log('PASS: 4 viewport widths, 7 pages, table containment, navigation, year filter, detail link, cover, mobile menu navigation');
+
+  const popupPromise = page.context().waitForEvent('page');
+  await page.evaluate(() => window.open('/about', '_blank'));
+  const popup = await popupPromise;
+  await popup.waitForLoadState();
+  assert.ok(await popup.locator('.adviser-content').isVisible());
+  assert.equal(await popup.locator('.adviser-picture').getAttribute('src'), 'https://images.microcms-assets.io/test-adviser.png');
+  const closed = popup.waitForEvent('close');
+  await popup.getByRole('button', { name: 'Webアプリを閉じる' }).click();
+  await closed;
+  await page.evaluate(() => { window.close = () => {}; });
+  await page.getByRole('button', { name: 'Webアプリを閉じる' }).click();
+  assert.ok(await page.getByRole('status').isVisible());
+  assert.match(await page.getByRole('status').innerText(), /ブラウザーのタブを閉じてください/);
+  console.log('PASS: Adviser HTML and Adviserpic image; script-opened window closes and blocked close shows manual-close guidance');
 
   data.topics.shift();
   await saveData();
