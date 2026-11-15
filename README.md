@@ -95,7 +95,7 @@ microCMS標準の `x-microcms-signature` を、生のリクエスト本文に対
 
 タイトルと説明はHTMLテキストです。画像とは分離しています。スマホは元画像の縦横比を使って高さを抑え、タブレットでは最大320pxにしています。`src/app/home.css` の `.hero-image>img` の `object-position` で富士山と麻雀卓の位置を調整できます。PC・スマホで元画像の表示を確認済みです。
 
-トップページは白と黒を基調とし、しっぽり明朝を `public/fonts/` からローカル配信しています（SIL Open Font License 1.1）。メニューは名称のみで、説明文・英語・番号・アイコンを省いています。トップ専用の配色と書体は `src/app/home.css` にまとめています。
+全ページは白と黒を基調とし、しっぽり明朝を `public/fonts/` からローカル配信しています（SIL Open Font License 1.1）。メニューは名称のみで、説明文・英語・番号・アイコンを省いています。共通の配色と書体は `src/app/theme.css`、トップ専用のレイアウトは `src/app/home.css` にまとめています。
 
 ## 引き渡し確認
 

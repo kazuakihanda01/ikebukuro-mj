@@ -7,5 +7,5 @@ export default async function Rules() {
   let content;
   try { content = <RichText html={(await getRules()).rules}/>; }
   catch (error) { cmsFailure(error); content = <ContentUnavailable/>; }
-  return <PageShell title="ルール" english="RULES"><section className="content-panel">{content}</section></PageShell>;
+  return <PageShell title="ルール"><section className="content-panel">{content}</section></PageShell>;
 }

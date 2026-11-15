@@ -7,5 +7,5 @@ export default async function Schedule() {
   let content;
   try { content = <RichText html={(await getSchedule()).schedule}/>; }
   catch (error) { cmsFailure(error); content = <ContentUnavailable/>; }
-  return <PageShell title="開催日程" english="SCHEDULE"><section className="content-panel">{content}</section></PageShell>;
+  return <PageShell title="開催日程"><section className="content-panel">{content}</section></PageShell>;
 }

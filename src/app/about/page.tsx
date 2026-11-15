@@ -7,5 +7,5 @@ export default async function About() {
   let content;
   try { content = <RichText html={(await getAbout()).aboutus}/>; }
   catch (error) { cmsFailure(error); content = <ContentUnavailable/>; }
-  return <PageShell title="池袋雀友会について" english="ABOUT US"><section className="content-panel">{content}</section></PageShell>;
+  return <PageShell title="池袋雀友会について"><section className="content-panel">{content}</section></PageShell>;
 }
