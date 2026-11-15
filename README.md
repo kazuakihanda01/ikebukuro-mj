@@ -40,13 +40,34 @@ Project Settings → Environment Variables に次を設定します。プレビ�
 
 APIキーはサーバー専用モジュールだけで使用します。ドラフトキーは使いません。キーや `.env.local` をGitに含めないでください。
 
-Framework PresetはNext.js、Root Directoryはリポジトリルート、Node.jsは22以上、Build Commandは `npm run build` です。既存Git連携のProduction Branchを変更せず、作業ブランチからPreview Deploymentを作成してください。CLI使用時は既存チームを選んで `vercel link --project ikebukuro-mj`、その後 `vercel` を実行します。`vercel --prod` は今回の範囲に含みません。CLI用 `VERCEL_TOKEN` は開発環境のシークレットとして管理し、アプリの環境変数には不要です。
+Framework PresetはNext.js、Root Directoryはリポジトリルート、Node.jsは22以上、Build Commandは `npm run build` です。VercelのProduction Branchは `main` とし、既存のGitHub連携でプレビュー・本番をデプロイします。
 
 既存プロジェクトのFrameworkは `nextjs` に設定済みで、ソースにも `vercel.json` を配置しています。読み取りAPIキーは既存のProduction設定を維持してPreviewにも追加済みです。CMSデータの更新は300秒キャッシュ方式で行い、Webhookの設定は不要です。
 
 環境変数の追加・変更後はプレビューデプロイを作り直してください。通常のCMS本文更新では再デプロイは不要です。
 
 動作確認したプレビュー: https://ikebukuro-mj-git-feat-memb-91ffa7-kazuakihanda01-5525s-projects.vercel.app （Vercel Authenticationあり）。実データとローカルのテストデータの検証範囲は `VERIFICATION.md` に記載しています。
+
+## 今後のコード変更・本番反映
+
+1. 最新の `main` から作業ブランチを作成する。
+2. 修正と必要な確認を行い、作業ブランチをGitHubへpushする。
+3. `main` 宛てのPull Requestを作成する。
+4. Vercelが自動作成するPreviewで確認し、URLと確認結果をPRに記載する。
+5. 確認後、ユーザーの指示でPRを `main` へマージする。
+6. VercelのGit連携が `main` の更新を検知して本番デプロイする。
+
+```sh
+git fetch origin
+git switch -c fix/example-change origin/main
+# 修正・確認後
+git push -u origin fix/example-change
+# GitHubで base: main、compare: fix/example-change のPRを作成
+```
+
+GitHubのデフォルトブランチも `main` に設定します。初回の `main` は、既に本番へ公開済みの `be9014a` と同じコミットから作成しています。PRの記載項目は `.github/PULL_REQUEST_TEMPLATE.md`、エージェント向けの作業ルールは `AGENTS.md` にまとめています。
+
+コード変更の本番反映はPRのマージを起点にします。microCMS本文だけの更新は引き続き300秒キャッシュ方式で反映され、PRや再デプロイは不要です。
 
 ## microCMSのAPI対応
 
