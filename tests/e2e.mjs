@@ -100,8 +100,7 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
   }
   assert.equal(await page.locator('h1').innerText(), '池袋雀友会 ポータル');
-  assert.ok((await page.locator('.hero-actions').boundingBox()).y < 500, 'priority buttons immediately visible on phone');
-  await page.locator('.hero-actions a[href="/score"]').click();
+  await page.locator('.menu-grid a[href="/score"]').click();
   await page.waitForURL('**/score');
   assert.equal(await page.getByRole('link', { name: '過去成績シート' }).getAttribute('href'), 'https://docs.google.com/spreadsheets/d/test-fixture');
   await page.goto(origin + '/topics');
@@ -113,7 +112,7 @@ try {
   await page.goto(origin + '/topics');
   await page.selectOption('#season', '');
   assert.equal(await page.locator('.topic-card').count(), 102);
-  console.log('PASS: 4 viewport widths, 7 pages, table containment, navigation, year filter, detail link, cover, mobile priority buttons');
+  console.log('PASS: 4 viewport widths, 7 pages, table containment, navigation, year filter, detail link, cover, mobile menu navigation');
 
   data.topics.shift();
   await writeFile(fixturePath, JSON.stringify(data));

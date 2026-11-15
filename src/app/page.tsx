@@ -9,10 +9,6 @@ export default function Home() {
       <div className="hero-copy">
         <h1>池袋雀友会 <span>ポータル</span></h1>
         <p className="intro">2008年から池袋を拠点に活動するノーレート麻雀のサークルです</p>
-        <div className="hero-actions">
-          <Link className="button button-primary" href="/schedule">開催日程</Link>
-          <Link className="button button-light" href="/score">今期成績</Link>
-        </div>
       </div>
       <HeroImage/>
     </section>
